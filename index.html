@@ -297,17 +297,19 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
       render();
     }
     async function initialize() {
-      ready = false;
-      const errorBox = document.getElementById('data-retry');
-     
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        await loadRecords();
-        ready = true;
-      } catch (error) {
-        console.error('Could not connect to Supabase:', error);
-        showLoadError(error.message || 'Could not load club records from Supabase.');
-      }
-    }
+  ready = false;
+  const errorBox = document.getElementById('data-retry');
+
+  try {
+    if (errorBox) errorBox.remove();
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    await loadRecords();
+    ready = true;
+  } catch (error) {
+    console.error('Could not connect to Supabase:', error);
+    showLoadError(error.message || 'Could not load club records from Supabase.');
+  }
+}
     function nextMonthDates() {
       const now = new Date();
       const year = now.getFullYear();
