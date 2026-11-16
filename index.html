@@ -75,7 +75,32 @@
         <p data-template-id="next-details" class="canva-text mb-5" style="font-size: 19px; color: rgb(80, 76, 67); font-weight: 400; font-style: normal;">6:00 PM · 6421 Aberdeen Lane 89107</p>
         <p data-template-id="next-note" class="canva-text mb-7 leading-relaxed" style="color: rgb(103, 100, 90); font-weight: 400; font-style: normal; font-size: 17px;">Bring your current read. There’s no required book and no pressure to finish before we meet.</p>
         <div class="sans flex items-center gap-2 mb-5">
-         <span id="attendee-count" class="font-bold text-2xl" aria-live="polite">0</span> <span data-template-id="going-label" class="canva-text text-sm" style="color: rgb(103, 100, 90); font-weight: 400; font-style: normal; font-size: 17px;">people going, including plus ones</span>
+         const [activityResult, rsvpResult] = await Promise.all([
+  supabaseClient
+    .from('public_activity')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(999),
+  supabaseClient
+    .from('rsvps')
+    .select('plus_ones')
+    .eq('event_id', EVENT_ID)
+]);
+
+if (activityResult.error) throw activityResult.error;
+if (rsvpResult.error) throw rsvpResult.error;
+
+backendRecords = activityResult.data.reverse().map(record => ({
+  ...record,
+  __backendId: record.id
+}));
+
+attendeeCount = rsvpResult.data.reduce(
+  (total, rsvp) => total + 1 + (Number(rsvp.plus_ones) || 0),
+  0
+);
+
+render(); <span data-template-id="going-label" class="canva-text text-sm" style="color: rgb(103, 100, 90); font-weight: 400; font-style: normal; font-size: 17px;">people going, including plus ones</span>
         </div>
         <form id="rsvp-form" class="grid sm:grid-cols-[1fr_130px_auto] gap-3 items-end">
          <div><label data-template-id="rsvp-name-label" for="rsvp-name" class="canva-text sans block text-sm font-semibold mb-2" style="color: rgb(40, 39, 31); font-weight: 600; font-style: normal; font-size: 17px;">Your name</label><input id="rsvp-name" class="field" type="text" maxlength="80" required="" autocomplete="name">
