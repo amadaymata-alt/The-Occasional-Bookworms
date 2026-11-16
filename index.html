@@ -300,10 +300,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
       ready = false;
       const errorBox = document.getElementById('data-retry');
       if (errorBox) errorBox.remove();
-      try {
-        if (SUPABASE_URL.includes('https://zlqpwmkhwhouztkzyfva.supabase.co') || SUPABASE_ANON_KEY.includes('sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW')) {
-          throw new Error('Add your Supabase project URL and publishable key in HTMLPage1.html before publishing.');
-        }
+      try {}
         if (!window.supabase || typeof window.supabase.createClient !== 'function') {
           throw new Error('The Supabase client did not load. Check your internet connection and reload.');
         }
