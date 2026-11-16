@@ -299,11 +299,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
     async function initialize() {
       ready = false;
       const errorBox = document.getElementById('data-retry');
-      if (errorBox) errorBox.remove();
-      try {}
-        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-          throw new Error('The Supabase client did not load. Check your internet connection and reload.');
-        }
+     
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         await loadRecords();
         ready = true;
