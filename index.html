@@ -274,8 +274,8 @@
                     <div class="grid lg:grid-cols-[1.3fr_.7fr] gap-5">
                         <article data-template-id="next-card" class="canva-card card p-6 sm:p-9" style="background: rgb(255, 253, 248);">
                             <p data-template-id="next-label" class="canva-text eyebrow mb-3" style="color: rgb(166, 78, 50); font-weight: 400; font-style: normal; font-size: 17px;">NEXT SCHEDULED MEETING</p>
-                            <h3 data-template-id="next-date" class="canva-text font-semibold leading-tight mb-2" style="font-size: 34px; color: rgb(40, 39, 31); font-weight: 600; font-style: normal;">Wednesday, November 18, 2026</h3>
-                            <p data-template-id="next-details" class="canva-text mb-5" style="font-size: 19px; color: rgb(80, 76, 67); font-weight: 400; font-style: normal;">6:00 PM · 6421 Aberdeen Lane 89107</p>
+                            <h3 data-template-id="next-date" class="canva-text font-semibold leading-tight mb-2" style="font-size: 34px; color: rgb(40, 39, 31); font-weight: 600; font-style: normal;">Saturday, December 12, 2026</h3>
+                            <p data-template-id="next-details" class="canva-text mb-5" style="font-size: 19px; color: rgb(80, 76, 67); font-weight: 400; font-style: normal;">4:30 PM · 6421 Aberdeen Lane 89107</p>
                             <p data-template-id="next-note" class="canva-text mb-7 leading-relaxed" style="color: rgb(103, 100, 90); font-weight: 400; font-style: normal; font-size: 17px;">Bring your current read. There’s no required book and no pressure to finish before we meet.</p>
                             <div class="sans flex items-center gap-2 mb-5">
 
@@ -295,7 +295,7 @@
                         <article data-template-id="upcoming-card" class="canva-card card p-6 sm:p-9 flex flex-col justify-between" style="background: rgb(221, 197, 173);">
                             <div>
                                 <p data-template-id="upcoming-label" class="canva-text eyebrow mb-3" style="color: rgb(126, 60, 41); font-weight: 400; font-style: normal; font-size: 17px;">COMING UP NEXT</p>
-                                <h3 data-template-id="upcoming-date" class="canva-text font-semibold mb-3" style="font-size: 29px; color: rgb(40, 39, 31); font-weight: 600; font-style: normal;">December 2026 gathering</h3>
+                                <h3 data-template-id="upcoming-date" class="canva-text font-semibold mb-3" style="font-size: 29px; color: rgb(40, 39, 31); font-weight: 600; font-style: normal;">January 2027 gathering</h3>
                                 <p data-template-id="upcoming-description" class="canva-text leading-relaxed" style="color: rgb(57, 54, 46); font-weight: 400; font-style: normal; font-size: 17px;">The date and location are still being decided. Share your availability below to help choose a time that works.</p>
                             </div>
                             <p data-template-id="upcoming-footnote" class="canva-text italic mt-8" style="color: rgb(87, 75, 61); font-weight: 400; font-style: italic; font-size: 17px;">All genres welcome. Always.</p>
@@ -434,7 +434,7 @@
             <div class="flex justify-between gap-3 sans text-xs mb-2">
                 <span data-template-id="reader-card-goal" class="canva-text"></span><span data-template-id="reader-card-percent" class="canva-text font-bold"></span>
             </div>
-            <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-track reader-overall-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
                 <div class="progress-fill"></div>
             </div>
         </article>
@@ -544,8 +544,8 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
                   ? `Total pages: ${current} / ${target}`
                   : `${current} / ${target} books`;
                 card.querySelector('[data-template-id="reader-card-percent"]').textContent = `${percent}%`;
-                card.querySelector('.progress-fill').style.width = `${Math.min(100, percent)}%`;
-                card.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', String(Math.min(100, percent)));
+                card.querySelector('.reader-overall-progress .progress-fill').style.width = `${Math.min(100, percent)}%`;
+                card.querySelector('.reader-overall-progress').setAttribute('aria-valuenow', String(Math.min(100, percent)));
                 card.querySelector('.reader-card-edit').onclick = () => startReaderEdit(r);
                 card.querySelector('.reader-card-delete').onclick = () => deleteReader(r);
               }
