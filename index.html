@@ -323,8 +323,8 @@
                                 </div>
                             </div>
                             <div id="books-goal-target-wrap">
-                                <label data-template-id="target-label" for="goal-target" class="canva-text sans block text-sm font-semibold mb-2" style="color: rgb(233, 231, 220); font-weight: 600; font-style: normal; font-size: 17px;">Books goal</label><input id="goal-target" class="field" type="number" min="1" step="1" required="">
-                            </div>
+                                                <label data-template-id="target-label" for="goal-target" class="canva-text sans block text-sm font-semibold mb-2" style="color: rgb(233, 231, 220); font-weight: 600; font-style: normal; font-size: 17px;">Books goal</label><input id="goal-target" class="field" type="number" min="1" step="1" required="">
+                                            </div>
                             <div>
                                 <p class="canva-text sans text-sm font-semibold mb-2" style="color: rgb(233, 231, 220);">Your books</p>
                                 <div id="reader-book-rows"></div>
@@ -493,11 +493,16 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
                 }
                 const data = r.reader_data || {};
                 const goalType = data.goal_type || r.goal_type || 'pages';
-                const target = Math.max(1, Number(data.goal_target ?? r.goal_target) || 1);
-                const books = Array.isArray(data.books) && data.books.length ? data.books : [{ title:r.book_title || 'Currently reading', current:data.goal_current ?? r.goal_current ?? 0, finished:false }];
+                const storedBooks = Array.isArray(data.books) && data.books.length ? data.books : [{ title:r.book_title || 'Currently reading', current:data.goal_current ?? r.goal_current ?? 0, finished:false }];
+                const legacyTarget = Math.max(1, Number(data.goal_target ?? r.goal_target) || 1);
+                const books = storedBooks.map(book => ({
+                  ...book,
+                  total: Math.max(1, Number(book.total) || (storedBooks.length === 1 ? legacyTarget : Number(book.current) || 1))
+                }));
                 const current = goalType === 'books'
                   ? books.filter(book => book.finished).length
                   : books.reduce((total, book) => total + Math.max(0, Number(book.current) || 0), 0);
+                const target = goalType === 'books' ? legacyTarget : books.reduce((total, book) => total + book.total, 0);
                 const percent = Math.round(current / target * 100);
                 card.querySelector('[data-template-id="reader-card-name"]').textContent = r.name || 'Bookworm';
                 const booksContainer = card.querySelector('[data-template-id="reader-card-books"]');
@@ -515,15 +520,29 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
                   title.textContent = book.title || 'Untitled book';
                   details.append(title);
                   if (goalType === 'pages') {
+                    const bookCurrent = Math.max(0, Number(book.current) || 0);
+                    const bookPercent = Math.min(100, Math.round(bookCurrent / book.total * 100));
                     const progress = document.createElement('p');
                     progress.className = 'sans text-xs text-[#676d63] mt-1';
-                    progress.textContent = `${Math.max(0, Number(book.current) || 0)} pages`;
-                    details.append(progress);
+                    progress.textContent = `${bookCurrent} / ${book.total} pages`;
+                    const track = document.createElement('div');
+                    track.className = 'progress-track mt-2';
+                    track.setAttribute('role', 'progressbar');
+                    track.setAttribute('aria-valuemin', '0');
+                    track.setAttribute('aria-valuemax', '100');
+                    track.setAttribute('aria-valuenow', String(bookPercent));
+                    const fill = document.createElement('div');
+                    fill.className = 'progress-fill';
+                    fill.style.width = `${bookPercent}%`;
+                    track.append(fill);
+                    details.append(progress, track);
                   }
                   row.append(check, details);
                   booksContainer.append(row);
                 });
-                card.querySelector('[data-template-id="reader-card-goal"]').textContent = `${current} / ${target} ${goalType}`;
+                card.querySelector('[data-template-id="reader-card-goal"]').textContent = goalType === 'pages'
+                  ? `Total pages: ${current} / ${target}`
+                  : `${current} / ${target} books`;
                 card.querySelector('[data-template-id="reader-card-percent"]').textContent = `${percent}%`;
                 card.querySelector('.progress-fill').style.width = `${Math.min(100, percent)}%`;
                 card.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', String(Math.min(100, percent)));
@@ -585,11 +604,15 @@ async function loadRecords() {
 }
             function addReaderBookRow(book = {}) {
               const row = document.createElement('div');
-              row.className = 'reader-book-row grid sm:grid-cols-[1fr_140px_36px] gap-3 items-end';
+              row.className = 'reader-book-row grid sm:grid-cols-[1fr_120px_120px_36px] gap-3 items-end';
               row.innerHTML = `
                 <div>
                   <label class="sans block text-xs font-semibold mb-1 text-[#28271f]">Book title</label>
                   <input class="field reader-book-title" type="text" maxlength="140" required>
+                </div>
+                <div class="reader-book-total-wrap">
+                  <label class="sans block text-xs font-semibold mb-1 text-[#28271f]">Total pages</label>
+                  <input class="field reader-book-total" type="number" min="1" step="1" value="1" required>
                 </div>
                 <div class="reader-book-current-wrap">
                   <label class="sans block text-xs font-semibold mb-1 text-[#28271f]">Pages read</label>
@@ -599,14 +622,16 @@ async function loadRecords() {
                   <input class="reader-check reader-book-finished" type="checkbox">
                   <span class="sans text-xs">Done</span>
                 </label>
-                <button type="button" class="reader-remove-book reader-edit-button sm:col-start-3" aria-label="Remove book">Remove</button>`;
+                <button type="button" class="reader-remove-book reader-edit-button sm:col-start-4" aria-label="Remove book">Remove</button>`;
               row.querySelector('.reader-book-title').value = book.title || '';
+              row.querySelector('.reader-book-total').value = String(Math.max(1, Number(book.total) || 1));
               row.querySelector('.reader-book-current').value = String(Math.max(0, Number(book.current) || 0));
               row.querySelector('.reader-book-finished').checked = Boolean(book.finished);
               row.querySelector('.reader-remove-book').addEventListener('click', () => {
                 if (document.querySelectorAll('#reader-book-rows .reader-book-row').length > 1) row.remove();
                 else {
                   row.querySelector('.reader-book-title').value = '';
+                  row.querySelector('.reader-book-total').value = '1';
                   row.querySelector('.reader-book-current').value = '0';
                   row.querySelector('.reader-book-finished').checked = false;
                 }
@@ -623,13 +648,18 @@ async function loadRecords() {
 
             function updateReaderGoalFields() {
               const goalType = document.getElementById('goal-type').value;
-              document.getElementById('books-goal-target-wrap').querySelector('label').textContent = goalType === 'books' ? 'Books goal' : 'Total pages goal';
-              document.querySelectorAll('.reader-book-current-wrap').forEach(wrap => {
-                wrap.classList.toggle('hidden', goalType === 'books');
-                const input = wrap.querySelector('.reader-book-current');
-                input.required = goalType === 'pages';
+              const isPagesGoal = goalType === 'pages';
+              document.getElementById('books-goal-target-wrap').classList.toggle('hidden', isPagesGoal);
+              document.getElementById('goal-target').required = !isPagesGoal;
+              document.querySelectorAll('#reader-book-rows .reader-book-total-wrap').forEach(wrap => {
+                wrap.classList.toggle('hidden', !isPagesGoal);
+                wrap.querySelector('.reader-book-total').required = isPagesGoal;
               });
-              document.querySelectorAll('.reader-book-finished-wrap').forEach(wrap => wrap.classList.toggle('hidden', goalType !== 'books'));
+              document.querySelectorAll('#reader-book-rows .reader-book-current-wrap').forEach(wrap => {
+                wrap.classList.toggle('hidden', !isPagesGoal);
+                wrap.querySelector('.reader-book-current').required = isPagesGoal;
+              });
+              document.querySelectorAll('#reader-book-rows .reader-book-finished-wrap').forEach(wrap => wrap.classList.toggle('hidden', isPagesGoal));
             }
 
             async function deleteReader(record) {
@@ -665,9 +695,13 @@ async function loadRecords() {
               const data = record.reader_data || {};
               const goalType = data.goal_type || record.goal_type || 'pages';
               const target = data.goal_target ?? record.goal_target ?? 1;
-              const books = Array.isArray(data.books) && data.books.length
+              const savedBooks = Array.isArray(data.books) && data.books.length
                 ? data.books
                 : [{ title:record.book_title || '', current:record.goal_current || 0, finished:false }];
+              const books = savedBooks.map(book => ({
+                ...book,
+                total: book.total || (savedBooks.length === 1 ? target : Math.max(Number(book.current) || 0, 1))
+              }));
               document.getElementById('reader-name').value = record.name || '';
               document.getElementById('goal-type').value = goalType;
               document.getElementById('goal-target').value = String(target);
@@ -812,18 +846,20 @@ async function loadRecords() {
                 e.preventDefault();
                 const name = document.getElementById('reader-name').value.trim();
                 const goalType = document.getElementById('goal-type').value;
-                const target = Number(document.getElementById('goal-target').value);
+                const booksGoal = Number(document.getElementById('goal-target').value);
                 const books = [...document.querySelectorAll('#reader-book-rows .reader-book-row')].map(row => ({
                   title: row.querySelector('.reader-book-title').value.trim(),
+                  total: goalType === 'pages' ? Number(row.querySelector('.reader-book-total').value) : 0,
                   current: goalType === 'pages' ? Number(row.querySelector('.reader-book-current').value) : 0,
                   finished: goalType === 'books' ? row.querySelector('.reader-book-finished').checked : false
                 })).filter(book => book.title);
                 if (!name) { message('reader-status', 'Enter your name.', true); return; }
                 if (!books.length) { message('reader-status', 'Add at least one book.', true); return; }
-                if (!Number.isInteger(target) || target < 1) { message('reader-status', 'Enter a goal of at least 1.', true); return; }
-                if (goalType === 'pages' && books.some(book => !Number.isInteger(book.current) || book.current < 0)) {
-                  message('reader-status', 'Enter a whole-number page count for each book.', true); return;
+                if (goalType === 'books' && (!Number.isInteger(booksGoal) || booksGoal < 1)) { message('reader-status', 'Enter a books goal of at least 1.', true); return; }
+                if (goalType === 'pages' && books.some(book => !Number.isInteger(book.total) || book.total < 1 || !Number.isInteger(book.current) || book.current < 0 || book.current > book.total)) {
+                  message('reader-status', 'Enter a valid total and pages-read amount for each book. Pages read cannot exceed the total.', true); return;
                 }
+                const target = goalType === 'books' ? booksGoal : books.reduce((total, book) => total + book.total, 0);
                 const current = goalType === 'books'
                   ? books.filter(book => book.finished).length
                   : books.reduce((total, book) => total + book.current, 0);
