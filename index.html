@@ -604,7 +604,7 @@ async function loadRecords() {
               row.querySelector('.reader-book-current').value = String(Math.max(0, Number(book.current) || 0));
               row.querySelector('.reader-book-finished').checked = Boolean(book.finished);
               row.querySelector('.reader-remove-book').addEventListener('click', () => {
-                if (document.querySelectorAll('.reader-book-row').length > 1) row.remove();
+                if (document.querySelectorAll('#reader-book-rows .reader-book-row').length > 1) row.remove();
                 else {
                   row.querySelector('.reader-book-title').value = '';
                   row.querySelector('.reader-book-current').value = '0';
@@ -813,7 +813,7 @@ async function loadRecords() {
                 const name = document.getElementById('reader-name').value.trim();
                 const goalType = document.getElementById('goal-type').value;
                 const target = Number(document.getElementById('goal-target').value);
-                const books = [...document.querySelectorAll('.reader-book-row')].map(row => ({
+                const books = [...document.querySelectorAll('#reader-book-rows .reader-book-row')].map(row => ({
                   title: row.querySelector('.reader-book-title').value.trim(),
                   current: goalType === 'pages' ? Number(row.querySelector('.reader-book-current').value) : 0,
                   finished: goalType === 'books' ? row.querySelector('.reader-book-finished').checked : false
