@@ -713,9 +713,8 @@ async function loadRecords() {
             }
 
             function nextMonthDates() {
-              const now = new Date();
-              const year = now.getFullYear();
-              const month = now.getMonth() + 1;
+              const year = 2027;
+              const month = 0;
               const first = new Date(year, month, 1);
               const count = new Date(year, month + 1, 0).getDate();
               document.getElementById('availability-month').textContent = first.toLocaleDateString('en-US', { month:'long', year:'numeric' });
