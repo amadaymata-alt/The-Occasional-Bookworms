@@ -184,6 +184,19 @@
             font-weight: 700;
         }
 
+        .reader-card-delete {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #b7b0a3;
+            border-radius: 999px;
+            color: #7d2e20;
+            background: #fffdf8;
+            font-family: 'DM Sans',sans-serif;
+            font-size: 18px;
+            line-height: 1;
+            font-weight: 700;
+        }
+
         .reader-check {
             accent-color: #3e6152;
             width: 18px;
@@ -412,7 +425,10 @@
         <article data-template-id="reader-card" class="canva-card card p-6">
             <div class="flex justify-between items-start gap-3 mb-4">
                 <h3 data-template-id="reader-card-name" class="canva-text font-semibold" style="font-size:25px;"></h3>
-                <button type="button" class="reader-edit-button reader-card-edit">Edit goal</button>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="reader-edit-button reader-card-edit">Edit goal</button>
+                    <button type="button" class="reader-card-delete" aria-label="Delete this reader">×</button>
+                </div>
             </div>
             <div data-template-id="reader-card-books" class="mb-5"></div>
             <div class="flex justify-between gap-3 sans text-xs mb-2">
@@ -431,6 +447,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
             let backendRecords = [];
             let attendeeCount = 0;
             let ready = false;
+            let editingReaderId = null;
 
             function message(id, text, error = false) {
               const el = document.getElementById(id);
@@ -511,6 +528,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
                 card.querySelector('.progress-fill').style.width = `${Math.min(100, percent)}%`;
                 card.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', String(Math.min(100, percent)));
                 card.querySelector('.reader-card-edit').onclick = () => startReaderEdit(r);
+                card.querySelector('.reader-card-delete').onclick = () => deleteReader(r);
               }
             }
             function showLoadError(text) {
@@ -612,11 +630,43 @@ async function loadRecords() {
             function updateReaderGoalFields() {
               const goalType = document.getElementById('goal-type').value;
               document.getElementById('books-goal-target-wrap').querySelector('label').textContent = goalType === 'books' ? 'Books goal' : 'Total pages goal';
-              document.querySelectorAll('.reader-book-current-wrap').forEach(wrap => wrap.classList.toggle('hidden', goalType === 'books'));
+              document.querySelectorAll('.reader-book-current-wrap').forEach(wrap => {
+                wrap.classList.toggle('hidden', goalType === 'books');
+                const input = wrap.querySelector('.reader-book-current');
+                input.required = goalType === 'pages';
+              });
               document.querySelectorAll('.reader-book-finished-wrap').forEach(wrap => wrap.classList.toggle('hidden', goalType !== 'books'));
             }
 
+            async function deleteReader(record) {
+              const name = record.name || 'Bookworm';
+              if (!window.confirm(`Delete ${name}'s entire reading card?`)) return;
+              if (!ready || !supabaseClient) {
+                message('reader-status', 'The club database is not connected yet. Please try again shortly.', true);
+                return;
+              }
+              const readerId = record.id || record.__backendId;
+              const result = await supabaseClient
+                .from('public_activity')
+                .delete()
+                .eq('id', readerId)
+                .eq('record_type', 'reader');
+              if (result.error) {
+                console.error('Could not delete reader card:', result.error);
+                message('reader-status', 'Could not delete this reading card. Please try again.', true);
+                return;
+              }
+              if (editingReaderId === readerId) {
+                editingReaderId = null;
+                initializeReaderBooks();
+                document.getElementById('goal-target').value = '';
+              }
+              message('reader-status', `${name}'s reading card was deleted.`);
+              await loadRecords();
+            }
+
             function startReaderEdit(record) {
+              editingReaderId = record.id || record.__backendId;
               const data = record.reader_data || {};
               const goalType = data.goal_type || record.goal_type || 'pages';
               const target = data.goal_target ?? record.goal_target ?? 1;
@@ -693,14 +743,26 @@ async function loadRecords() {
                     available_dates: record.record_type === 'availability' ? record.available_dates : null
                   });
                 } else {
-                  const { record_type, name, comment_text, book_title, goal_type, goal_current, goal_target, reader_data } = record;
-                  result = await supabaseClient.from('public_activity').insert({
-                    record_type, name, comment_text, book_title, goal_type, goal_current, goal_target, reader_data
-                  });
+                  const { record_type, name, comment_text, book_title, goal_type, goal_current, goal_target, reader_data, editing_reader_id } = record;
+                  const values = { record_type, name, comment_text, book_title, goal_type, goal_current, goal_target, reader_data };
+                  if (editing_reader_id) {
+                    result = await supabaseClient.from('public_activity').update(values).eq('id', editing_reader_id);
+                    if (result.error && /reader_data|column/i.test(result.error.message || '')) {
+                      const legacyValues = { record_type, name, comment_text, book_title, goal_type, goal_current, goal_target };
+                      result = await supabaseClient.from('public_activity').update(legacyValues).eq('id', editing_reader_id);
+                    }
+                  } else {
+                    result = await supabaseClient.from('public_activity').insert(values);
+                    if (result.error && /reader_data|column/i.test(result.error.message || '')) {
+                      const legacyValues = { record_type, name, comment_text, book_title, goal_type, goal_current, goal_target };
+                      result = await supabaseClient.from('public_activity').insert(legacyValues);
+                    }
+                  }
                 }
                 if (result.error) throw result.error;
                 form.reset();
                 if (record.record_type === 'reader') {
+                  editingReaderId = null;
                   initializeReaderBooks();
                   document.getElementById('goal-target').value = '';
                 }
@@ -770,6 +832,7 @@ async function loadRecords() {
                   goal_current:current,
                   goal_target:target,
                   reader_data:readerData,
+                  editing_reader_id:editingReaderId,
                   submitted_at:new Date().toISOString()
                 }, 'reader-status');
               });
