@@ -548,30 +548,24 @@ const SUPABASE_ANON_KEY = 'sb_publishable_-U5EA2sD84Z8f56xj-zbUQ_mzWpxjHW';
               box.append(button);
             }
 async function loadRecords() {
-          const [activityResult, rsvpResult] = await Promise.all([
+          const [activityResult, attendeeCountResult] = await Promise.all([
             supabaseClient
               .from('public_activity')
               .select('*')
               .order('created_at', { ascending: false })
               .limit(999),
-            supabaseClient
-              .from('rsvps')
-              .select('plus_ones')
-              .eq('event_id', EVENT_ID)
+            supabaseClient.rpc('get_attendee_count')
           ]);
 
           if (activityResult.error) throw activityResult.error;
-          if (rsvpResult.error) throw rsvpResult.error;
+          if (attendeeCountResult.error) throw attendeeCountResult.error;
 
           backendRecords = activityResult.data.reverse().map(record => ({
             ...record,
             __backendId: record.id
           }));
 
-          attendeeCount = rsvpResult.data.reduce(
-            (total, rsvp) => total + 1 + (Number(rsvp.plus_ones) || 0),
-            0
-          );
+          attendeeCount = Number(attendeeCountResult.data) || 0;
 
           render();
 }
