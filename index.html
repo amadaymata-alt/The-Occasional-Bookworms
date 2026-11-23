@@ -667,6 +667,7 @@ async function loadRecords() {
 
             function startReaderEdit(record) {
               editingReaderId = record.id || record.__backendId;
+              document.querySelector('[data-template-id="reader-button"]').textContent = 'Save changes →';
               const data = record.reader_data || {};
               const goalType = data.goal_type || record.goal_type || 'pages';
               const target = data.goal_target ?? record.goal_target ?? 1;
@@ -751,6 +752,13 @@ async function loadRecords() {
                       const legacyValues = { record_type, name, comment_text, book_title, goal_type, goal_current, goal_target };
                       result = await supabaseClient.from('public_activity').update(legacyValues).eq('id', editing_reader_id);
                     }
+                    if (result.error) {
+                      result = await supabaseClient.from('public_activity').insert(values);
+                      if (result.error && /reader_data|column/i.test(result.error.message || '')) {
+                        const legacyValues = { record_type, name, comment_text, book_title, goal_type, goal_current, goal_target };
+                        result = await supabaseClient.from('public_activity').insert(legacyValues);
+                      }
+                    }
                   } else {
                     result = await supabaseClient.from('public_activity').insert(values);
                     if (result.error && /reader_data|column/i.test(result.error.message || '')) {
@@ -763,6 +771,7 @@ async function loadRecords() {
                 form.reset();
                 if (record.record_type === 'reader') {
                   editingReaderId = null;
+                  document.querySelector('[data-template-id="reader-button"]').textContent = 'Save my progress →';
                   initializeReaderBooks();
                   document.getElementById('goal-target').value = '';
                 }
